@@ -1,6 +1,5 @@
 'use client';
 import { useMemo } from 'react'
-
 import dynamic from 'next/dynamic'
 import './tldraw.css'
 import { Vibe3DCodeButton } from './components/Vibe3DCodeButton'
@@ -12,11 +11,12 @@ import ThreeJSCanvas from './components/three/canvas'
 import { useTabStore } from './store/appStore'
 import TestAddCodeButton from './components/TestAddCodeButton'
 import { TldrawLogo } from './components/TldrawLogo'
+import { createTLStore, defaultShapeUtils } from '@tldraw/tldraw'
 
+// Динамічно імпортуємо Tldraw з вимкненим SSR
 const Tldraw = dynamic(async () => (await import('@tldraw/tldraw')).Tldraw, {
 	ssr: false,
 })
-import { createTLStore, defaultShapeUtils } from '@tldraw/tldraw'
 
 const shapeUtils = [PreviewShapeUtil, Model3DPreviewShapeUtil]
 
@@ -30,11 +30,11 @@ interface TabGroupProps {
 const TabGroup = ({ activeTab, setActiveTab }: TabGroupProps) => {
 	return (
 		<div style={{
-			position: 'fixed', 
-			top: '20px', 
-			left: '50%', 
+			position: 'fixed',
+			top: '20px',
+			left: '50%',
 			transform: 'translateX(-50%)',
-			zIndex: 9999999, 
+			zIndex: 9999999,
 			display: 'flex',
 			gap: '6px',
 			padding: '6px',
@@ -42,12 +42,12 @@ const TabGroup = ({ activeTab, setActiveTab }: TabGroupProps) => {
 			backgroundColor: 'white',
 			boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
 		}}>
-			<button 
+			<button
 				style={{
-					padding: '6px 12px', 
-					border: 'none', 
+					padding: '6px 12px',
+					border: 'none',
 					borderRadius: '4px',
-					backgroundColor: activeTab === 'tldraw' ? '#007bff' : '#f0f0f0', 
+					backgroundColor: activeTab === 'tldraw' ? '#007bff' : '#f0f0f0',
 					color: activeTab === 'tldraw' ? 'white' : 'black',
 					cursor: 'pointer',
 					transition: 'background-color 0.2s'
@@ -56,12 +56,12 @@ const TabGroup = ({ activeTab, setActiveTab }: TabGroupProps) => {
 			>
 				2D Canvas
 			</button>
-			<button 
+			<button
 				style={{
-					padding: '6px 12px', 
-					border: 'none', 
+					padding: '6px 12px',
+					border: 'none',
 					borderRadius: '4px',
-					backgroundColor: activeTab === 'threejs' ? '#007bff' : '#f0f0f0', 
+					backgroundColor: activeTab === 'threejs' ? '#007bff' : '#f0f0f0',
 					color: activeTab === 'threejs' ? 'white' : 'black',
 					cursor: 'pointer',
 					transition: 'background-color 0.2s'
@@ -74,16 +74,15 @@ const TabGroup = ({ activeTab, setActiveTab }: TabGroupProps) => {
 	)
 }
 
-export default function App() {
+// Виносимо логіку в окремий клієнтський компонент
+function MainEditor() {
 	const { activeTab, setActiveTab } = useTabStore()
 
-	// Огортаємо в useMemo, щоб сховище створювалося лише ОДИН раз при запуску
 	const customStore = useMemo(() => createTLStore({
 		shapeUtils: [...defaultShapeUtils, ...shapeUtils]
 	}), [])
 
 	return (
-		// далі ваш return без змін...
 		<>
 			<TabGroup activeTab={activeTab} setActiveTab={setActiveTab} />
 			<div className="editor">
@@ -113,4 +112,14 @@ export default function App() {
 			<TestAddCodeButton activeTab={activeTab} setActiveTab={setActiveTab} />
 		</>
 	)
+}
+
+// Головний експорт сторінки завантажує весь інтерфейс суто в браузері
+const DynamicApp = dynamic(async () => MainEditor, {
+	ssr: false,
+	loading: () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading Editor...</div>
+})
+
+export default function App() {
+	return <DynamicApp />
 }
