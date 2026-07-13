@@ -138,8 +138,6 @@ function MainEditor() {
 					...defaultShapeUtils,
 					...shapeUtils,
 				],
-				// Додаємо автозбереження в браузері:
-				persistenceKey: 'vibe-draw-persistence-key',
 			}),
 		[]
 	);
@@ -170,6 +168,8 @@ function MainEditor() {
 					<Tldraw
 						store={customStore}
 						shapeUtils={shapeUtils}
+						// ДОДАЄМО СЮДИ
+						persistenceKey="vibe-draw-autosave"
 						shareZone={
 							<div style={{ display: 'flex' }}>
 								<Vibe3DCodeButton />
