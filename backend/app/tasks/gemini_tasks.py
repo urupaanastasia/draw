@@ -60,9 +60,9 @@ class GeminiPromptTask(GenericPromptTask, AsyncGeminiTask):
         # Базовий промпт, який змусить Gemini описати ідеальну 3D модель
         system_prompt = (
             "You are an AI that converts sketches into beautiful 3D concepts. "
-            "Analyze the user's sketch and describe it as a stunning, highly-detailed 3D low-poly model concept. "
+            "Analyze the user's sketch, detect what object is drawn, and describe it as a stunning, highly-detailed 3D low-poly model concept. "
             "Your response must be only a single descriptive English prompt for an image generator, nothing else. "
-            "Example output: A beautiful low-poly 3D model of a lush green tree, isolated on white background, game asset, isometric view."
+            "Example output: A beautiful low-poly 3D model of a sleek futuristic car, isolated on white background, game asset, isometric view."
         )
 
         try:
@@ -121,9 +121,9 @@ class GeminiImageGenerationTask(GenericPromptTask, AsyncGeminiTask):
         if not system_prompt:
             system_prompt = (
                 "You are an AI that converts sketches into beautiful 3D concepts. "
-                "Analyze the user's sketch and describe it as a stunning, highly-detailed 3D low-poly model concept. "
+                "Analyze the user's sketch, detect what object is drawn, and describe it as a stunning, highly-detailed 3D low-poly model concept. "
                 "Your response must be only a single descriptive English prompt for an image generator, nothing else. "
-                "Example output: A beautiful low-poly 3D model of a lush green tree, isolated on white background, game asset, isometric view."
+                "Example output: A beautiful low-poly 3D model of a sleek futuristic car, isolated on white background, game asset, isometric view."
             )
 
         try:
@@ -149,8 +149,8 @@ class GeminiImageGenerationTask(GenericPromptTask, AsyncGeminiTask):
                          temperature: float = DEFAULT_TEMPERATURE,
                          additional_params: Optional[Dict[str, Any]] = None):
         """Process a prompt with an image for Gemini image generation."""
-        # Дефолтний промпт про випадок, якщо Google API лежить через ліміти
-        gemini_prompt = "A beautiful 3D low-poly model of a lush green tree, isolated on white background, game asset, isometric view"
+        # Спочатку промпт порожній — ніяких дерев за замовчуванням
+        gemini_prompt = ""
 
         try:
             # Publish start event
@@ -179,10 +179,9 @@ class GeminiImageGenerationTask(GenericPromptTask, AsyncGeminiTask):
                 elif isinstance(response, dict) and "text" in response:
                     gemini_prompt = response["text"].strip()
             except Exception as google_err:
-                # Якщо у Google закінчилися ліміти (429), використовуємо наш дефолтний опис дерева
-                print(f"[WARN] Google Gemini API limit hit ({str(google_err)}). Using high-quality fallback prompt.")
-                if prompt:
-                    gemini_prompt = f"A beautiful 3D low-poly model of {prompt}, isolated on white background, game asset, isometric view"
+                # Якщо закінчилися ліміти або сталася помилка — чесно пишемо про це
+                print(f"[ERROR] Google Gemini API error: {str(google_err)}")
+                gemini_prompt = "AI limits reached. Please try again later."
 
             print(f"[FINAL PROMPT FOR POLLINATIONS]: {gemini_prompt}")
 
