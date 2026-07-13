@@ -96,7 +96,6 @@ export default function App() {
 				}}>
 					<Tldraw
 						store={customStore}
-						licenseKey="tldraw-2026-10-20/WyJ6bHlLUjlFWCIsWyIqIl0sMTYsIjIwMjYtMTAtMjAiXQ.Gq9r3cDQ9OVViGIN7+FBz06Ea3E9Jgv8NCvvN81vCRBxaZQRH2UI9FbdNwgsHkgnKOhoEKS8TaXBSzrqw9BBIA"
 						shareZone={
 							<div style={{ display: 'flex' }}>
 								<Vibe3DCodeButton />
