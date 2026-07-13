@@ -1,100 +1,173 @@
 'use client';
-import { useMemo } from 'react'
-import dynamic from 'next/dynamic'
-import './tldraw.css'
-import { Vibe3DCodeButton } from './components/Vibe3DCodeButton'
-import { AutoDrawButton } from './components/AutoDrawButton'
-import { ImproveDrawingButton } from './components/ImproveDrawingButton'
-import { PreviewShapeUtil } from './PreviewShape/PreviewShape'
-import { Model3DPreviewShapeUtil } from './PreviewShape/Model3DPreviewShape'
-import ThreeJSCanvas from './components/three/canvas'
-import { useTabStore } from './store/appStore'
-import TestAddCodeButton from './components/TestAddCodeButton'
-import { TldrawLogo } from './components/TldrawLogo'
-import { createTLStore, defaultShapeUtils } from '@tldraw/tldraw'
 
-// Динамічно імпортуємо Tldraw з вимкненим SSR
-const Tldraw = dynamic(async () => (await import('@tldraw/tldraw')).Tldraw, {
-	ssr: false,
-})
+import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import './tldraw.css';
 
-const shapeUtils = [PreviewShapeUtil, Model3DPreviewShapeUtil]
+import { Vibe3DCodeButton } from './components/Vibe3DCodeButton';
+import { AutoDrawButton } from './components/AutoDrawButton';
+import { ImproveDrawingButton } from './components/ImproveDrawingButton';
 
-type TabType = 'tldraw' | 'threejs'
+import { PreviewShapeUtil } from './PreviewShape/PreviewShape';
+import { Model3DPreviewShapeUtil } from './PreviewShape/Model3DPreviewShape';
+
+import { useTabStore } from './store/appStore';
+import TestAddCodeButton from './components/TestAddCodeButton';
+import { TldrawLogo } from './components/TldrawLogo';
+
+import {
+	createTLStore,
+	defaultShapeUtils,
+} from '@tldraw/tldraw';
+
+// ---------- Dynamic imports ----------
+
+const Tldraw = dynamic(
+	() => import('@tldraw/tldraw').then((m) => m.Tldraw),
+	{
+		ssr: false,
+	}
+);
+
+const ThreeJSCanvas = dynamic(
+	() => import('./components/three/canvas'),
+	{
+		ssr: false,
+		loading: () => (
+			<div
+				style={{
+					width: '100%',
+					height: '100%',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					background: '#111',
+					color: 'white',
+				}}
+			>
+				Loading 3D...
+			</div>
+		),
+	}
+);
+
+// ---------- Shapes ----------
+
+const shapeUtils = [
+	PreviewShapeUtil,
+	Model3DPreviewShapeUtil,
+];
+
+type TabType = 'tldraw' | 'threejs';
 
 interface TabGroupProps {
 	activeTab: TabType;
 	setActiveTab: (tab: TabType) => void;
 }
 
-const TabGroup = ({ activeTab, setActiveTab }: TabGroupProps) => {
+function TabGroup({
+					  activeTab,
+					  setActiveTab,
+				  }: TabGroupProps) {
 	return (
-		<div style={{
-			position: 'fixed',
-			top: '20px',
-			left: '50%',
-			transform: 'translateX(-50%)',
-			zIndex: 9999999,
-			display: 'flex',
-			gap: '6px',
-			padding: '6px',
-			borderRadius: '8px',
-			backgroundColor: 'white',
-			boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-		}}>
+		<div
+			style={{
+				position: 'fixed',
+				top: 20,
+				left: '50%',
+				transform: 'translateX(-50%)',
+				zIndex: 9999999,
+				display: 'flex',
+				gap: 6,
+				padding: 6,
+				borderRadius: 8,
+				background: 'white',
+				boxShadow: '0 4px 12px rgba(0,0,0,.15)',
+			}}
+		>
 			<button
+				onClick={() => setActiveTab('tldraw')}
 				style={{
 					padding: '6px 12px',
 					border: 'none',
-					borderRadius: '4px',
-					backgroundColor: activeTab === 'tldraw' ? '#007bff' : '#f0f0f0',
-					color: activeTab === 'tldraw' ? 'white' : 'black',
+					borderRadius: 4,
 					cursor: 'pointer',
-					transition: 'background-color 0.2s'
+					background:
+						activeTab === 'tldraw'
+							? '#007bff'
+							: '#f0f0f0',
+					color:
+						activeTab === 'tldraw'
+							? 'white'
+							: 'black',
 				}}
-				onClick={() => setActiveTab('tldraw')}
 			>
 				2D Canvas
 			</button>
+
 			<button
+				onClick={() => setActiveTab('threejs')}
 				style={{
 					padding: '6px 12px',
 					border: 'none',
-					borderRadius: '4px',
-					backgroundColor: activeTab === 'threejs' ? '#007bff' : '#f0f0f0',
-					color: activeTab === 'threejs' ? 'white' : 'black',
+					borderRadius: 4,
 					cursor: 'pointer',
-					transition: 'background-color 0.2s'
+					background:
+						activeTab === 'threejs'
+							? '#007bff'
+							: '#f0f0f0',
+					color:
+						activeTab === 'threejs'
+							? 'white'
+							: 'black',
 				}}
-				onClick={() => setActiveTab('threejs')}
 			>
 				3D World
 			</button>
 		</div>
-	)
+	);
 }
 
-// Виносимо логіку в окремий клієнтський компонент
 function MainEditor() {
-	const { activeTab, setActiveTab } = useTabStore()
+	const { activeTab, setActiveTab } = useTabStore();
 
-	const customStore = useMemo(() => createTLStore({
-		shapeUtils: [...defaultShapeUtils, ...shapeUtils]
-	}), [])
+	const customStore = useMemo(
+		() =>
+			createTLStore({
+				shapeUtils: [
+					...defaultShapeUtils,
+					...shapeUtils,
+				],
+			}),
+		[]
+	);
 
 	return (
 		<>
-			<TabGroup activeTab={activeTab} setActiveTab={setActiveTab} />
+			<TabGroup
+				activeTab={activeTab}
+				setActiveTab={setActiveTab}
+			/>
+
 			<div className="editor">
-				<div style={{
-					position: 'absolute',
-					width: '100%',
-					height: '100%',
-					visibility: activeTab === 'tldraw' ? 'visible' : 'hidden',
-					zIndex: activeTab === 'tldraw' ? 2 : 1
-				}}>
+				<div
+					style={{
+						position: 'absolute',
+						width: '100%',
+						height: '100%',
+						visibility:
+							activeTab === 'tldraw'
+								? 'visible'
+								: 'hidden',
+						zIndex:
+							activeTab === 'tldraw'
+								? 2
+								: 1,
+					}}
+				>
 					<Tldraw
 						store={customStore}
+						shapeUtils={shapeUtils}
 						shareZone={
 							<div style={{ display: 'flex' }}>
 								<Vibe3DCodeButton />
@@ -102,24 +175,41 @@ function MainEditor() {
 								<AutoDrawButton />
 							</div>
 						}
-						shapeUtils={shapeUtils}
 					>
 						<TldrawLogo />
 					</Tldraw>
 				</div>
+
 				<ThreeJSCanvas visible={activeTab === 'threejs'} />
 			</div>
-			<TestAddCodeButton activeTab={activeTab} setActiveTab={setActiveTab} />
+
+			<TestAddCodeButton
+				activeTab={activeTab}
+				setActiveTab={setActiveTab}
+			/>
 		</>
-	)
+	);
 }
 
-// Головний експорт сторінки завантажує весь інтерфейс суто в браузері
-const DynamicApp = dynamic(async () => MainEditor, {
-	ssr: false,
-	loading: () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading Editor...</div>
-})
+const DynamicApp = dynamic(
+	() => Promise.resolve(MainEditor),
+	{
+		ssr: false,
+		loading: () => (
+			<div
+				style={{
+					height: '100vh',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+				}}
+			>
+				Loading Editor...
+			</div>
+		),
+	}
+);
 
 export default function App() {
-	return <DynamicApp />
+	return <DynamicApp />;
 }
