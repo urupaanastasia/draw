@@ -167,3 +167,9 @@
 	justify-content: center;
 	cursor: pointer;
 }
+.tldrawLogo,
+.tldrawLogo__mobile,
+.tl-watermark,
+[data-testid="tl-watermark"] {
+	display: none !important;
+}
