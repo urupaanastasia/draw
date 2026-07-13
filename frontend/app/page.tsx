@@ -210,6 +210,6 @@ const DynamicApp = dynamic(
 	}
 );
 
-export default function App() {
-	return <DynamicApp />;
+export default function Page() {
+	return <DynamicApp />
 }
