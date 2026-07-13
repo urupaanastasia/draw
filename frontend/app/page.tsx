@@ -138,6 +138,8 @@ function MainEditor() {
 					...defaultShapeUtils,
 					...shapeUtils,
 				],
+				// Додаємо автозбереження в браузері:
+				persistenceKey: 'vibe-draw-persistence-key',
 			}),
 		[]
 	);
