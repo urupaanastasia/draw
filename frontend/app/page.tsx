@@ -132,13 +132,37 @@ function MainEditor() {
 	const { activeTab, setActiveTab } = useTabStore();
 
 	const customStore = useMemo(
-		() =>
-			createTLStore({
+		() => {
+			const store = createTLStore({
 				shapeUtils: [
 					...defaultShapeUtils,
 					...shapeUtils,
 				],
-			}),
+			});
+
+			const PERSISTENCE_KEY = 'vibe-draw-autosave-v1';
+
+			if (typeof window !== 'undefined') {
+				// 1. Спробуємо завантажити збережений стан
+				const serializedSchema = localStorage.getItem(PERSISTENCE_KEY);
+				if (serializedSchema) {
+					try {
+						const data = JSON.parse(serializedSchema);
+						store.loadSnapshot(data);
+					} catch (e) {
+						console.error('Не вдалося завантажити збережений малюнок:', e);
+					}
+				}
+
+				// 2. Підписуємося на оновлення та зберігаємо їх у браузері
+				store.listen(() => {
+					const snapshot = store.getSnapshot();
+					localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(snapshot));
+				});
+			}
+
+			return store;
+		},
 		[]
 	);
 
@@ -168,8 +192,6 @@ function MainEditor() {
 					<Tldraw
 						store={customStore}
 						shapeUtils={shapeUtils}
-						// ДОДАЄМО СЮДИ
-						persistenceKey="vibe-draw-autosave"
 						shareZone={
 							<div style={{ display: 'flex' }}>
 								<Vibe3DCodeButton />
