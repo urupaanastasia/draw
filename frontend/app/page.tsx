@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import './tldraw.css';
 
@@ -14,11 +13,6 @@ import { Model3DPreviewShapeUtil } from './PreviewShape/Model3DPreviewShape';
 import { useTabStore } from './store/appStore';
 import TestAddCodeButton from './components/TestAddCodeButton';
 import { TldrawLogo } from './components/TldrawLogo';
-
-import {
-	createTLStore,
-	defaultShapeUtils,
-} from '@tldraw/tldraw';
 
 // ---------- Dynamic imports ----------
 
@@ -128,43 +122,14 @@ function TabGroup({
 	);
 }
 
+// Унікальний ключ для автозбереження. Якщо колись зміните структуру
+// власних shape-утилів (PreviewShape, Model3DPreviewShape) так, що старі
+// збережені малюнки стануть несумісні — просто змініть цей рядок,
+// і tldraw почне зберігати стан "з чистого аркуша" під новим ключем.
+const PERSISTENCE_KEY = 'vibe-draw-autosave-v1';
+
 function MainEditor() {
 	const { activeTab, setActiveTab } = useTabStore();
-
-	const customStore = useMemo(
-		() => {
-			const store = createTLStore({
-				shapeUtils: [
-					...defaultShapeUtils,
-					...shapeUtils,
-				],
-			});
-
-			const PERSISTENCE_KEY = 'vibe-draw-autosave-v1';
-
-			if (typeof window !== 'undefined') {
-				// 1. Спробуємо завантажити збережений стан
-				const serializedSchema = localStorage.getItem(PERSISTENCE_KEY);
-				if (serializedSchema) {
-					try {
-						const data = JSON.parse(serializedSchema);
-						store.loadSnapshot(data);
-					} catch (e) {
-						console.error('Не вдалося завантажити збережений малюнок:', e);
-					}
-				}
-
-				// 2. Підписуємося на оновлення та зберігаємо їх у браузері
-				store.listen(() => {
-					const snapshot = store.getSnapshot();
-					localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(snapshot));
-				});
-			}
-
-			return store;
-		},
-		[]
-	);
 
 	return (
 		<>
@@ -190,7 +155,7 @@ function MainEditor() {
 					}}
 				>
 					<Tldraw
-						store={customStore}
+						persistenceKey={PERSISTENCE_KEY}
 						shapeUtils={shapeUtils}
 						shareZone={
 							<div style={{ display: 'flex' }}>
