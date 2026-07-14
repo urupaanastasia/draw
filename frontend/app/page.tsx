@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+// 1. ВИПРАВЛЕНО: Додано useEffect в імпорт
+import { useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import './tldraw.css';
 
@@ -128,54 +129,51 @@ function TabGroup({
 	);
 }
 
-// Унікальний ключ для автозбереження. Якщо колись зміните структуру
-// власних shape-утилів (PreviewShape, Model3DPreviewShape) так, що старі
-// збережені малюнки стануть несумісні — просто змініть цей рядок,
-// і tldraw почне зберігати стан "з чистого аркуша" під новим ключем.
-const PERSISTENCE_KEY = 'vibe-draw-autosave-v1';
-
 function MainEditor() {
 	const { activeTab, setActiveTab } = useTabStore();
 
-	const customStore = useMemo(() => {
-		const store = createTLStore({
-			shapeUtils: [...defaultShapeUtils, ...shapeUtils],
-		});
+	// 1. Створюємо чисте сховище, яке розуміє твої кастомні 3D-фігури
+	const customStore = useMemo(
+		() =>
+			createTLStore({
+				shapeUtils: [
+					...defaultShapeUtils,
+					...shapeUtils,
+				],
+			}),
+		[]
+	);
 
-		if (typeof window !== 'undefined') {
-			// 1. Спробуємо завантажити збережений стан
+	// 2. Цей хук гарантовано спрацює у браузері після завантаження сторінки
+	useEffect(() => {
+		// ВИПРАВЛЕНО: Ключ тепер оголошено один раз безпосередньо тут
+		const PERSISTENCE_KEY = 'vibe-draw-autosave-v3';
+
+		// Крок А: Пробуємо завантажити збережений малюнок, якщо він є
+		const savedData = localStorage.getItem(PERSISTENCE_KEY);
+		if (savedData) {
 			try {
-				const raw = localStorage.getItem(PERSISTENCE_KEY);
-				if (raw) {
-					const snapshot = JSON.parse(raw);
-					store.loadSnapshot(snapshot);
-					console.log('[vibe-draw] Малюнок відновлено з localStorage');
-				} else {
-					console.log('[vibe-draw] Збереженого малюнка не знайдено — починаємо з чистого аркуша');
-				}
+				const parsed = JSON.parse(savedData);
+				customStore.loadSnapshot(parsed);
+				console.log('🎉 Малюнок успішно завантажено з пам’яті браузера!');
 			} catch (e) {
-				console.error('[vibe-draw] Не вдалося завантажити збережений малюнок:', e);
+				console.error('Помилка завантаження малюнка:', e);
 			}
-
-			// 2. Підписуємося на оновлення. Фільтруємо тільки зміни документа
-			// від користувача (ігноруємо ephemeral-стан на кшталт виділення,
-			// позиції камери, наведення курсору тощо), щоб не засмічувати
-			// localStorage і не ловити зайвих ре-рендерів.
-			store.listen(
-				() => {
-					try {
-						const snapshot = store.getSnapshot();
-						localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(snapshot));
-					} catch (e) {
-						console.error('[vibe-draw] Не вдалося зберегти малюнок:', e);
-					}
-				},
-				{ source: 'user', scope: 'document' }
-			);
 		}
 
-		return store;
-	}, []);
+		// Крок Б: Підписуємося на будь-які зміни на дошці та зберігаємо їх
+		const unsubscribe = customStore.listen(() => {
+			try {
+				const snapshot = customStore.getSnapshot();
+				localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(snapshot));
+			} catch (e) {
+				console.error('Помилка збереження малюнка:', e);
+			}
+		});
+
+		// Відписуємося при демонтажі компонента (правило хорошого тону в React)
+		return () => unsubscribe();
+	}, [customStore]);
 
 	return (
 		<>
@@ -226,6 +224,7 @@ function MainEditor() {
 	);
 }
 
+// ВИПРАВЛЕНО: Повернуто кінцівку файлу, яка випадково зникла
 const DynamicApp = dynamic(
 	() => Promise.resolve(MainEditor),
 	{
