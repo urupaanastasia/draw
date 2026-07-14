@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import './tldraw.css';
 
@@ -13,6 +14,11 @@ import { Model3DPreviewShapeUtil } from './PreviewShape/Model3DPreviewShape';
 import { useTabStore } from './store/appStore';
 import TestAddCodeButton from './components/TestAddCodeButton';
 import { TldrawLogo } from './components/TldrawLogo';
+
+import {
+	createTLStore,
+	defaultShapeUtils,
+} from '@tldraw/tldraw';
 
 // ---------- Dynamic imports ----------
 
@@ -131,6 +137,46 @@ const PERSISTENCE_KEY = 'vibe-draw-autosave-v1';
 function MainEditor() {
 	const { activeTab, setActiveTab } = useTabStore();
 
+	const customStore = useMemo(() => {
+		const store = createTLStore({
+			shapeUtils: [...defaultShapeUtils, ...shapeUtils],
+		});
+
+		if (typeof window !== 'undefined') {
+			// 1. Спробуємо завантажити збережений стан
+			try {
+				const raw = localStorage.getItem(PERSISTENCE_KEY);
+				if (raw) {
+					const snapshot = JSON.parse(raw);
+					store.loadSnapshot(snapshot);
+					console.log('[vibe-draw] Малюнок відновлено з localStorage');
+				} else {
+					console.log('[vibe-draw] Збереженого малюнка не знайдено — починаємо з чистого аркуша');
+				}
+			} catch (e) {
+				console.error('[vibe-draw] Не вдалося завантажити збережений малюнок:', e);
+			}
+
+			// 2. Підписуємося на оновлення. Фільтруємо тільки зміни документа
+			// від користувача (ігноруємо ephemeral-стан на кшталт виділення,
+			// позиції камери, наведення курсору тощо), щоб не засмічувати
+			// localStorage і не ловити зайвих ре-рендерів.
+			store.listen(
+				() => {
+					try {
+						const snapshot = store.getSnapshot();
+						localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(snapshot));
+					} catch (e) {
+						console.error('[vibe-draw] Не вдалося зберегти малюнок:', e);
+					}
+				},
+				{ source: 'user', scope: 'document' }
+			);
+		}
+
+		return store;
+	}, []);
+
 	return (
 		<>
 			<TabGroup
@@ -155,7 +201,7 @@ function MainEditor() {
 					}}
 				>
 					<Tldraw
-						persistenceKey={PERSISTENCE_KEY}
+						store={customStore}
 						shapeUtils={shapeUtils}
 						shareZone={
 							<div style={{ display: 'flex' }}>
